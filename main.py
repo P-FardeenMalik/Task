@@ -40,27 +40,35 @@ def get_txid(tx):
     tx_hash = hashlib.sha256(tx_hex.encode()).hexdigest()
     return tx_hash
 
-def calculate_merkle_root(tx_hashes):
-    if len(tx_hashes) == 1:
-        return tx_hashes[0]
+def calculate_merkle_root(txids):
+    # Handle the "coinbase" transaction separately
+    if "coinbase" in txids:
+        txids.remove("coinbase")
     
-    new_hashes = []
-    for i in range(0, len(tx_hashes), 2):
-        hash1 = tx_hashes[i]
-        hash2 = tx_hashes[i + 1] if i + 1 < len(tx_hashes) else tx_hashes[i]
-        
-        # Ensure hash1 and hash2 are valid hexadecimal strings
-        if not all(c in '0123456789abcdefABCDEF' for c in hash1):
-            raise ValueError(f"Invalid hexadecimal string: {hash1}")
-        
-        if not all(c in '0123456789abcdefABCDEF' for c in hash2):
-            raise ValueError(f"Invalid hexadecimal string: {hash2}")
-        
-        combined = hash1 + hash2
-        new_hash = hashlib.sha256(hashlib.sha256(bytes.fromhex(combined)).digest()).hexdigest()
-        new_hashes.append(new_hash)
-    
-    return calculate_merkle_root(new_hashes)
+    # If the list has an odd number of items, duplicate the last item
+    if len(txids) % 2 != 0:
+        txids.append(txids[-1])
+
+    while len(txids) > 1:
+        new_txids = []
+
+        for i in range(0, len(txids), 2):
+            hash1 = hashlib.sha256(hashlib.sha256(bytes.fromhex(txids[i])).digest()).hexdigest()
+            
+            # Check if the next hash exists before calculating
+            if i + 1 < len(txids):
+                hash2 = hashlib.sha256(hashlib.sha256(bytes.fromhex(txids[i + 1])).digest()).hexdigest()
+            else:
+                hash2 = hash1  # If not, use the same hash for the second one
+
+            new_hash = hashlib.sha256(hash1.encode() + hash2.encode()).hexdigest()
+            new_txids.append(new_hash)
+
+        txids = new_txids
+
+    return txids[0]
+
+
 
 
 def mine_block(header):
