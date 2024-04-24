@@ -1,38 +1,30 @@
-import json
 import hashlib
+import json
 import os
 import datetime
+import time
 
 def validate_transaction(tx):
-    # Check version
     if tx['version'] != 2:
         return False
     
-    # Check locktime
     if tx['locktime'] != 0:
         return False
     
-    # Validate vin
     for vin in tx['vin']:
-        # Check if prevout exists
         if 'prevout' not in vin or 'value' not in vin['prevout']:
             return False
         
-        # Check scriptpubkey
         if vin['prevout']['scriptpubkey_type'] not in ['v0_p2wpkh', 'v1_p2tr']:
             return False
         
-        # Check value
         if vin['prevout']['value'] <= 0:
             return False
     
-    # Validate vout
     for vout in tx['vout']:
-        # Check scriptpubkey
         if vout['scriptpubkey_type'] != 'p2sh':
             return False
         
-        # Check value
         if vout['value'] <= 0:
             return False
     
@@ -48,8 +40,28 @@ def get_txid(tx):
     tx_hash = hashlib.sha256(tx_hex.encode()).hexdigest()
     return tx_hash
 
-def calculate_merkle_root(txids):
-    return hashlib.sha256(hashlib.sha256(txids.encode()).digest()).hexdigest()
+def calculate_merkle_root(tx_hashes):
+    if len(tx_hashes) == 1:
+        return tx_hashes[0]
+    
+    new_hashes = []
+    for i in range(0, len(tx_hashes), 2):
+        hash1 = tx_hashes[i]
+        hash2 = tx_hashes[i + 1] if i + 1 < len(tx_hashes) else tx_hashes[i]
+        
+        # Ensure hash1 and hash2 are valid hexadecimal strings
+        if not all(c in '0123456789abcdefABCDEF' for c in hash1):
+            raise ValueError(f"Invalid hexadecimal string: {hash1}")
+        
+        if not all(c in '0123456789abcdefABCDEF' for c in hash2):
+            raise ValueError(f"Invalid hexadecimal string: {hash2}")
+        
+        combined = hash1 + hash2
+        new_hash = hashlib.sha256(hashlib.sha256(bytes.fromhex(combined)).digest()).hexdigest()
+        new_hashes.append(new_hash)
+    
+    return calculate_merkle_root(new_hashes)
+
 
 def mine_block(header):
     nonce = 0
@@ -91,8 +103,11 @@ def main():
     transactions.insert(0, coinbase_tx)
     valid_txids.insert(0, "coinbase")
 
+    # Remove "coinbase" from valid_txids
+    valid_txids.remove("coinbase")
+
     # Calculate Merkle root
-    merkle_root = calculate_merkle_root(''.join(valid_txids))
+    merkle_root = calculate_merkle_root(valid_txids)
 
     # Create block header
     header = {
