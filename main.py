@@ -58,8 +58,8 @@ def construct_block(transactions):
     # Construct the block header
     block_header = merkle_root + coinbase_txid
     
-    # Pad the block header to ensure it's exactly 80 bytes
-    block_header_padded = block_header.ljust(128, '0')[:128]
+    # Ensure the block header is exactly 80 bytes
+    block_header_padded = block_header.ljust(160, '0')[:160]
 
     # Check if the block hash meets the target difficulty
     while True:
@@ -68,13 +68,14 @@ def construct_block(transactions):
             break
         else:
             # Increment the nonce and update the block header
-            nonce = int(block_header_padded[112:], 16) + 1
-            block_header_padded = block_header_padded[:112] + format(nonce, 'x').zfill(16)
+            nonce = int(block_header_padded[144:], 16) + 1
+            block_header_padded = block_header_padded[:144] + format(nonce, 'x').zfill(16)
     
     return {
         'header': block_header_padded,
         'valid_txids': valid_txids
     }
+
 
 def main():
     files = [f for f in os.listdir("mempool") if f.endswith('.json')]
