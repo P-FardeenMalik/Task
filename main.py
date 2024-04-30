@@ -47,37 +47,24 @@ def construct_block(transactions):
     
     merkle_root = calculate_merkle_root(valid_txids)
     
-    # Ensure Merkle root and coinbase transaction hash are exactly 32 bytes each
-    merkle_root_bytes = bytes.fromhex(merkle_root)
-    if len(merkle_root_bytes) < 32:
-        merkle_root_bytes = b'\x00' * (32 - len(merkle_root_bytes)) + merkle_root_bytes
-    elif len(merkle_root_bytes) > 32:
-        merkle_root_bytes = merkle_root_bytes[:32]
-    merkle_root = merkle_root_bytes.hex()
-    
-    coinbase_txid = valid_txids[0][:64]  # Take the first 64 characters, which represent 32 bytes
-    if len(coinbase_txid) < 64:
-        coinbase_txid = coinbase_txid + '0' * (64 - len(coinbase_txid))  # Pad with zeros
-    elif len(coinbase_txid) > 64:
-        coinbase_txid = coinbase_txid[:64]
-    
     # Constructing the block header
-    block_header = merkle_root + coinbase_txid
+    version = '02000000'
+    prev_block_hash = '0000000000000000000000000000000000000000000000000000000000000000'
+    timestamp = '1231006505'  # Example timestamp (Genesis block)
+    bits = '1d00ffff'  # Difficulty target
+    nonce = '00000000'  # Placeholder nonce
     
-    # Padding to achieve 80 bytes for the header
-    block_header_padded = block_header.ljust(160, '0')  # Pad with zeros
+    block_header = version + prev_block_hash + merkle_root + timestamp + bits + nonce
     
-    # Ensure block header is exactly 80 bytes
-    if len(block_header_padded) != 160:
-        raise ValueError("Invalid header length")
+    # Calculate the hash of the block header
+    block_hash = hashlib.sha256(hashlib.sha256(bytes.fromhex(block_header)).digest()).hexdigest()
     
     return {
+        'block_header': block_header,
+        'block_hash': block_hash,
         'merkle_root': merkle_root,
-        'valid_txids': valid_txids,
-        'coinbase_txid': coinbase_txid,
-        'block_header': block_header_padded
+        'valid_txids': valid_txids
     }
-
 
 def main():
     files = [f for f in os.listdir("mempool") if f.endswith('.json')]
@@ -93,8 +80,10 @@ def main():
     
     # Write the block header and serialized coinbase transaction to output.txt
     with open("output.txt", "w") as f:
-        f.write(f"{block['block_header']}\n")
-        f.write(f"{block['valid_txids'][0]}\n")
+        f.write(f"Block Header: {block['block_header']}\n")
+        f.write(f"Block Hash: {block['block_hash']}\n")
+        f.write(f"Merkle Root: {block['merkle_root']}\n")
+        f.write(f"Coinbase Transaction: {block['valid_txids'][0]}\n")
         
         for txid in block['valid_txids']:
             f.write(f"{txid}\n")
