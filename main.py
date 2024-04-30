@@ -59,13 +59,22 @@ def construct_block(transactions):
     block_header = merkle_root + coinbase_txid
     
     # Pad the block header to ensure it's exactly 80 bytes
-    block_header_padded = block_header.ljust(160, '0')[:160]
+    block_header_padded = block_header.ljust(128, '0')[:128]
+
+    # Check if the block hash meets the target difficulty
+    while True:
+        block_hash = hashlib.sha256(hashlib.sha256(bytes.fromhex(block_header_padded)).digest()).hexdigest()
+        if block_hash < '0000ffff00000000000000000000000000000000000000000000000000000000':
+            break
+        else:
+            # Increment the nonce and update the block header
+            nonce = int(block_header_padded[112:], 16) + 1
+            block_header_padded = block_header_padded[:112] + format(nonce, 'x').zfill(16)
     
     return {
         'header': block_header_padded,
         'valid_txids': valid_txids
     }
-
 
 def main():
     files = [f for f in os.listdir("mempool") if f.endswith('.json')]
@@ -82,6 +91,7 @@ def main():
     # Write the block header and serialized coinbase transaction to output.txt
     with open("output.txt", "w") as f:
         f.write(f"{block['header']}\n")
+        f.write(f"{block['valid_txids'][0]}\n")
         
         for txid in block['valid_txids']:
             f.write(f"{txid}\n")
