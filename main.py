@@ -46,37 +46,36 @@ def construct_block(transactions):
             valid_txids.append(txid)
     
     merkle_root = calculate_merkle_root(valid_txids)
+    coinbase_txid = valid_txids[0]
+    
+    # Padding to achieve 80 bytes for the header
+    merkle_root = merkle_root.ljust(64, '0')  # Pad with zeros
+    coinbase_txid = coinbase_txid.ljust(64, '0')  # Pad with zeros
+    
     # Ensure Merkle root and coinbase transaction hash are exactly 32 bytes each
     merkle_root_bytes = bytes.fromhex(merkle_root)
-    merkle_root_bytes = merkle_root_bytes[:32]  # Ensure only 32 bytes are taken
-    
-    coinbase_txid = valid_txids[0][:64]  # Take the first 64 characters, which represent 32 bytes
-    coinbase_txid = coinbase_txid[:64]  # Ensure only 64 characters are taken
-    
-    # Pad Merkle root and coinbase transaction hash to achieve 32 bytes each
+    if len(merkle_root_bytes) < 32:
+        merkle_root_bytes = b'\x00' * (32 - len(merkle_root_bytes)) + merkle_root_bytes
+    elif len(merkle_root_bytes) > 32:
+        merkle_root_bytes = merkle_root_bytes[:32]
     merkle_root = merkle_root_bytes.hex()
-    coinbase_txid = coinbase_txid.ljust(64, '0')  # Pad with zeros to reach 64 characters
     
-    # Combine Merkle root and coinbase transaction hash to form the block header
-    block_header = merkle_root + coinbase_txid
+    coinbase_txid_bytes = bytes.fromhex(coinbase_txid)
+    if len(coinbase_txid_bytes) < 32:
+        coinbase_txid_bytes = b'\x00' * (32 - len(coinbase_txid_bytes)) + coinbase_txid_bytes
+    elif len(coinbase_txid_bytes) > 32:
+        coinbase_txid_bytes = coinbase_txid_bytes[:32]
+    coinbase_txid = coinbase_txid_bytes.hex()
     
-    # Pad block header to achieve exactly 80 bytes
-    block_header = block_header.ljust(160, '0')  # Pad with zeros to reach 80 bytes
+    header = merkle_root + coinbase_txid
     
-    # Write the block header and serialized coinbase transaction to output.txt
-    with open("output.txt", "w") as f:
-        f.write(f"Block Header: {block_header}\n")
-        f.write(f"Coinbase Transaction: {valid_txids[0]}\n")
-        
-        for txid in valid_txids:
-            f.write(f"{txid}\n")
-
+    # Padding the header to achieve exactly 80 bytes
+    header = header.ljust(160, '0')  # 160 hex characters is equivalent to 80 bytes
+    
     return {
-        'merkle_root': merkle_root,
-        'valid_txids': valid_txids,
-        'coinbase_txid': coinbase_txid
+        'header': header,
+        'valid_txids': valid_txids
     }
-
 
 
 def main():
@@ -93,8 +92,7 @@ def main():
     
     # Write the block header and serialized coinbase transaction to output.txt
     with open("output.txt", "w") as f:
-        f.write(f"{block['merkle_root']}\n")
-        f.write(f"{block['valid_txids'][0]}\n")
+        f.write(f"Block Header: {block['header']}\n")
         
         for txid in block['valid_txids']:
             f.write(f"{txid}\n")
