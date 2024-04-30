@@ -92,7 +92,7 @@ def main():
     
     # Write the block header and serialized coinbase transaction to output.txt
     with open("output.txt", "w") as f:
-        f.write(f"Block Header: {block['header']}\n")
+        f.write(f"{block['header']}\n")
         
         for txid in block['valid_txids']:
             f.write(f"{txid}\n")
