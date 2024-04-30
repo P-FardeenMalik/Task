@@ -48,32 +48,21 @@ def construct_block(transactions):
     merkle_root = calculate_merkle_root(valid_txids)
     coinbase_txid = valid_txids[0]
     
-    # Padding to achieve 80 bytes for the header
-    merkle_root = merkle_root.ljust(64, '0')  # Pad with zeros
-    coinbase_txid = coinbase_txid.ljust(64, '0')  # Pad with zeros
-    
     # Ensure Merkle root and coinbase transaction hash are exactly 32 bytes each
     merkle_root_bytes = bytes.fromhex(merkle_root)
-    if len(merkle_root_bytes) < 32:
-        merkle_root_bytes = b'\x00' * (32 - len(merkle_root_bytes)) + merkle_root_bytes
-    elif len(merkle_root_bytes) > 32:
-        merkle_root_bytes = merkle_root_bytes[:32]
     merkle_root = merkle_root_bytes.hex()
     
     coinbase_txid_bytes = bytes.fromhex(coinbase_txid)
-    if len(coinbase_txid_bytes) < 32:
-        coinbase_txid_bytes = b'\x00' * (32 - len(coinbase_txid_bytes)) + coinbase_txid_bytes
-    elif len(coinbase_txid_bytes) > 32:
-        coinbase_txid_bytes = coinbase_txid_bytes[:32]
     coinbase_txid = coinbase_txid_bytes.hex()
     
-    header = merkle_root + coinbase_txid
+    # Construct the block header
+    block_header = merkle_root + coinbase_txid
     
-    # Padding the header to achieve exactly 80 bytes
-    header = header.ljust(160, '0')  # 160 hex characters is equivalent to 80 bytes
+    # Pad the block header to ensure it's exactly 80 bytes
+    block_header_padded = block_header.ljust(160, '0')[:160]
     
     return {
-        'header': header,
+        'header': block_header_padded,
         'valid_txids': valid_txids
     }
 
